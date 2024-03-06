@@ -24,6 +24,9 @@ We'll *rarely* be using eTL on this course!
 * We may instruct you to submit some of the assignments via eTL
 
 ## Announcements 
+* 3/6 : Submit your GitHub username **by 3/11** (https://github.com/snu-sf-class/swpp202401/issues/4)
+* 3/6 : Submit application if you want to develop on our lab server **by 3/18**
+(https://github.com/snu-sf-class/swpp202401/issues/2)
 
 ## Projects
 
