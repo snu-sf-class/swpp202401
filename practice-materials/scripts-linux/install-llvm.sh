@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LLVM_VER="18.1.0-rc4"
+LLVM_VER="18.1.0"
 
 echo "[SCRIPT] Changing APT mirror for faster download..."
 sudo apt update
