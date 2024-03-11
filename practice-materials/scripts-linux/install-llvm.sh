@@ -16,9 +16,8 @@ sudo apt update
 sudo apt -y install git g++ cmake ninja-build python3-distutils zlib1g-dev libncurses-dev
 
 echo "[SCRIPT] Cloning LLVM-$LLVM_VER source..."
-LLVM_SRC_DIR=llvm-project-$LLVM_VER
-git clone -b llvmorg-$LLVM_VER https://github.com/llvm/llvm-project.git --depth 1 $LLVM_SRC_DIR
-cd $LLVM_SRC_DIR
+git clone -b llvmorg-$LLVM_VER https://github.com/llvm/llvm-project.git --depth 1
+cd llvm-project
 
 echo "[SCRIPT] Building and installing libc++..."
 sleep 2
