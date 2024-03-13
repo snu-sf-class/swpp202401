@@ -11,3 +11,4 @@ Note: More materials will be added as the semester goes on!
 * 2024/03/06: Bumped LLVM version in installation scripts
 * 2024/03/07: Added Ninja installation scripts
 * 2024/03/07: Added practice session slides & dev-env-check
+* 2024/03/11: Updated LLVM build scripts for libc++ bootstrapping
