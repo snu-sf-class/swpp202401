@@ -1,0 +1,34 @@
+----- build -----
+----- run constfold with constfold.ll -----
+; ModuleID = 'constfold.ll'
+source_filename = "constfold.ll"
+
+define i32 @constant_fold() {
+  ret i32 2
+}
+----- run fillundef with fillundef.ll -----
+; ModuleID = 'fillundef.ll'
+source_filename = "fillundef.ll"
+
+define i32 @f(i1 %cond, i32 %arg) {
+  %inst = add i32 1, 1
+  br i1 %cond, label %undef_zone, label %normal_zone
+
+undef_zone:                                       ; preds = %0
+  %x1 = add i32 undef, 0
+  ret i32 undef
+
+normal_zone:                                      ; preds = %0
+  %x2 = add i32 %arg, 0
+  ret i32 %inst
+}
+----- run instmatch with instmatch.ll -----
+Found i32 %a + i32 %b - i32 %b!
+	Can be optimized to i32 %a
+Found i32 %a == i32 %a!
+	Can be optimized to true
+Found i32 %a * 0!
+	Can be optimized to zero
+----- test constfold -----
+== constfold.ll ==
+== constfold-bad.ll ==

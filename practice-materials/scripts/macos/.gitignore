@@ -1,3 +1,4 @@
 cmake-src-*
 llvm-project-*
-ninja-src-*
+alive2
+z3
