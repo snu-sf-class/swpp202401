@@ -36,3 +36,9 @@ See here: https://github.com/snu-sf-class/swpp202401-assn1
   * If you cannot compile word.cpp, please check whether your C++ compiler supports c++17.
     `g++ --version` should print version 7 or above. `clang++ --version` should print version 10 or above.
   * Submit to [eTL](https://myetl.snu.ac.kr/courses/258192/assignments/238592)
+
+* 3/28 : Assignment 2 has been announced. Deadline is 4/6, 11:59 PM.
+See here: [Assignment 2 Directory](practice-materials/assignments/assn2)
+  * Run [package.sh](practice-materials/assignments/assn2/package.sh) to create
+  the submission archive
+  * Submit to [eTL](https://myetl.snu.ac.kr/courses/258192/assignments/242744)
