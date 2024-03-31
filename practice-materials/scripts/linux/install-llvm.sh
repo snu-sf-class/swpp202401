@@ -33,8 +33,7 @@ cmake -G Ninja -S llvm -B $BSTRP_BUILD_DIR \
     -DBUILD_SHARED_LIBS=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$LLVM_DIR
-cmake --build $BSTRP_BUILD_DIR
-cmake --install $BSTRP_BUILD_DIR
+cmake --build $BSTRP_BUILD_DIR && cmake --install $BSTRP_BUILD_DIR
 
 echo "[SCRIPT] Building and installing LLVM..."
 sleep 2
@@ -58,5 +57,4 @@ cmake -G Ninja -S llvm -B $BUILD_DIR \
     -DBUILD_SHARED_LIBS=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$LLVM_DIR
-cmake --build $BUILD_DIR
-cmake --install $BUILD_DIR
+cmake --build $BUILD_DIR && cmake --install $BUILD_DIR
