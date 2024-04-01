@@ -35,6 +35,12 @@ cmake -G Ninja -S llvm -B $BSTRP_BUILD_DIR \
     -DCMAKE_INSTALL_PREFIX=$LLVM_DIR
 cmake --build $BSTRP_BUILD_DIR && cmake --install $BSTRP_BUILD_DIR
 
+# Cancel build if bootstrap build failed
+if [[ $? -ne 0 ]]; then
+    echo "[SCRIPT] Error while building libc++!"
+    exit 1
+fi
+
 echo "[SCRIPT] Building and installing LLVM..."
 sleep 2
 BUILD_DIR=build-$LLVM_VER
@@ -58,3 +64,8 @@ cmake -G Ninja -S llvm -B $BUILD_DIR \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$LLVM_DIR
 cmake --build $BUILD_DIR && cmake --install $BUILD_DIR
+
+if [[ $? -ne 0 ]]; then
+    echo "[SCRIPT] Error while building LLVM!"
+    exit 1
+fi
