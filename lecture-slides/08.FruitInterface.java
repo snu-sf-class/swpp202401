@@ -1,13 +1,13 @@
-interface FruitI {
+interface Fruit {
     public void setName(String name);
     public String getName();
     public void print();
 }
 
-class Fruit {
+class FruitImpl {
     private String name;
 
-    public Fruit() { name = ""; }
+    public FruitImpl() { name = ""; }
     public void setName(String name) { this.name = name; }
     public String getName() { return name; }
     public void print() {
@@ -15,9 +15,9 @@ class Fruit {
     }
 }
 
-class Apple implements FruitI {
-    Fruit base;
-    public Apple() { base = new Fruit(); }; // composition for code reuse
+class Apple implements Fruit {
+    FruitImpl base;
+    public Apple() { base = new FruitImpl(); }; // composition for code reuse
     /* boiler plate code */
     public void setName(String name) { base.setName(name); }
     public String getName() { return base.getName(); }
@@ -28,9 +28,9 @@ class Apple implements FruitI {
     }
 }
 
-class Orange implements FruitI {
-    Fruit base;
-    public Orange() { base = new Fruit(); }; // composition for code reuse
+class Orange implements Fruit {
+    FruitImpl base;
+    public Orange() { base = new FruitImpl(); }; // composition for code reuse
     public void setName(String name) { base.setName(name); }
     public String getName() { return base.getName(); }
     public void print() {
@@ -40,7 +40,7 @@ class Orange implements FruitI {
 }
 
 class Main {
-    static void printFruit(FruitI fruit) {
+    static void printFruit(Fruit fruit) {
 	fruit.setName("Gil");
 	fruit.print();
     }

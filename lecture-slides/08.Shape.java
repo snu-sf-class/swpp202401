@@ -1,23 +1,23 @@
-interface ShapeI {
-  getArea()
+interface Shape {
+    getArea();
 }
 
-interface RectangleI extends ShapeI{
-   setWidth(width)
-   setHeight(height)
+interface Rectangle extends Shape {
+    setWidth(width);
+    setHeight(height);
 }
 
-class Rectangle implements RectangleI {
+class RectangleImpl implements Rectangle {
    // ...
 }
 
-interface SquareI extends ShapeI{
-   setSide(side)
+interface Square extends Shape {
+    setSide(side);
 }
 
-class Square implements SquareI {
-   Rectangle rect
-   Square() { new Rectangle }
-   setSide(side) { rect.setWidth(side); base.setHeight(side) }
-   getArea() { return rect.getArea() }
+class SquareImpl implements Square {
+    Rectangle rect;
+    SquareImpl() { rect = new Rectangle; }
+    setSide(side) { rect.setWidth(side); rect.setHeight(side); }
+    getArea() { return rect.getArea(); }
 }
