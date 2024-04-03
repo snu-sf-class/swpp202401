@@ -9,7 +9,11 @@ CMAKE=$CMAKE_DIR/bin/cmake
 CTEST=$CMAKE_DIR/bin/ctest
 CLANG=$LLVM_DIR/bin/clang
 CLANGXX=$LLVM_DIR/bin/clang++
-LLD=$LLVM_DIR/bin/ld.lld
+if [ "$(uname)" == "Darwin" ]; then
+    LLD=$LLVM_DIR/bin/ld64.lld
+else
+    LLD=$LLVM_DIR/bin/ld.lld
+fi
 NINJA=$NINJA_DIR/bin/ninja
 
 $CMAKE -G Ninja -B build \
