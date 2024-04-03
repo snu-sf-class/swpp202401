@@ -7,11 +7,17 @@ module;
 export module maybe_something;
 
 namespace maybe_something {
+enum class State {
+  VALID,
+  MOVED_FROM
+};
+
 class Something {
 private:
   // Number of Something objects created so far
   static size_t global_num_objects;
   std::string content;
+  State state;
 
 public:
   // A constructor that can accept both std::string and Cstring
@@ -28,28 +34,33 @@ public:
 
     // Copy constructor and copy assignment operator
     // Copy constructor increases global_num_objects by 1
+    // Copy assignment does not modify global_num_objects
     Something(const Something &other);
     Something &operator=(const Something &other);
 
     // Move constructor and move assignment operator
     // Move constructor does not increase global_num_objects
+    // Move assignment does not modify global_num_objects
+    // 'Moved-from' object's state should be set to MOVED_FROM
     Something(Something &&other) noexcept;
     Something &operator=(Something &&other) noexcept;
 
     // Destructor
-    // This decreases global_num_objects by 1
+    // If state is VALID, decrease global_num_objects by 1
+    // If state is MOVED_FROM, do nothing
     ~Something();
 
-    // return the string_view to the content
+    // If state is VALID, return the string_view to the content
     std::string_view view_content() const;
 
-    // return the number of Something objects
+    // If state is VALID, return the number of Something objects
     size_t count() const noexcept;
 };
 
 class Nothing {
   private:
     static size_t global_num_objects;
+    State state;
 
   public:
     // This increases global_num_objects by 1
@@ -64,14 +75,16 @@ class Nothing {
     // Move constructor and move assignment operator
     // Move constructor does not increase global_num_objects
     // Move assignment does not modify global_num_objects
+    // 'Moved-from' object's state should be set to MOVED_FROM
     Nothing(Nothing &&other) noexcept;
     Nothing &operator=(Nothing &&other) noexcept;
 
     // Destructor
-    // This decreases global_num_objects by 1
+    // If state is VALID, decrease global_num_objects by 1
+    // If state is MOVED_FROM, do nothing
     ~Nothing();
 
-    // return the number of Nothing objects
+    // If state is VALID, return the number of Nothing objects
     size_t count() const noexcept;
 };
 

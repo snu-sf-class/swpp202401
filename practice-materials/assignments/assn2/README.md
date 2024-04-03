@@ -40,4 +40,11 @@ You have to complete the function signature, and implement its definition
 in the module implementation unit.  
 Such functions are marked with `// [TOFIX]!!!`.
 
+`Something` and `Nothing` are in a `VALID` state when constructed.
+Moving functions may put an object in a `MOVED_FROM` state.  
+You may only assign to & destroy `MOVED_FROM` object. Calling other operations
+on a `MOVED_FROM` object is considered as UB.  
+That is, you may implement it whichever way you prefer
+(exception, exit, trap, whatever...), and we won't test such cases.
+
 If your implementation passes every test, you'll get the full mark.
