@@ -35,8 +35,13 @@ cmake -G Ninja -S llvm -B $BSTRP_BUILD_DIR \
     -DCMAKE_INSTALL_PREFIX=$LLVM_DIR
 cmake --build $BSTRP_BUILD_DIR && cmake --install $BSTRP_BUILD_DIR
 
-# Cancel build if bootstrap build failed
-if [[ $? -ne 0 ]]; then
+# Register libc++ to the dynamic linker if the build succeeds
+# Or cancel build if bootstrap build failed
+if [[ $? -eq 0 ]]; then
+    echo "[SCRIPT] Registering libc++ to the system dynamic linker!"
+    echo "$LLVM_DIR/lib/x86_64-unknown-linux-gnu" | sudo tee /etc/ld.so.conf.d/libcxx-18.conf
+    sudo ldconfig
+else
     echo "[SCRIPT] Error while building libc++!"
     exit 1
 fi
