@@ -14,7 +14,7 @@ enum class State {
 
 class Something {
 private:
-  // Number of Something objects created so far
+  // Number of `VALID` Something objects
   static size_t global_num_objects;
   std::string content;
   State state;
@@ -40,7 +40,9 @@ public:
 
     // Move constructor and move assignment operator
     // Move constructor does not increase global_num_objects
+    // Move assignment decrease global_num_objects by 1 if target is `VALID`
     // Move assignment does not modify global_num_objects
+    // if target is `MOVED_FROM`
     // 'Moved-from' object's state should be set to MOVED_FROM
     Something(Something &&other) noexcept;
     Something &operator=(Something &&other) noexcept;
@@ -59,6 +61,7 @@ public:
 
 class Nothing {
   private:
+    // Number of `VALID` Nothing objects
     static size_t global_num_objects;
     State state;
 
