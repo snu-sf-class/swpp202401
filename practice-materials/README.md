@@ -15,3 +15,4 @@ Note: More materials will be added as the semester goes on!
 * 2024/03/14: Added practice session slides 2-5
 * 2024/03/21: Updated practice session slides 2-5
 * 2024/03/28: Updated practice session slides 6-7 & related materials
+* 2024/04/04: Updated practice session slides 8-10 & related materials
