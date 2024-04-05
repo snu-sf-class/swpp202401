@@ -34,7 +34,8 @@ public:
 
     // Copy constructor and copy assignment operator
     // Copy constructor increases global_num_objects by 1
-    // Copy assignment does not modify global_num_objects
+    // Copy assignment does not modify global_num_objects if both are VALID
+    // Copy assignment increases global_num_objects by 1 if dest is MOVED_FROM
     Something(const Something &other);
     Something &operator=(const Something &other);
 
