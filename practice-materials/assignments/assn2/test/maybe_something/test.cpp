@@ -1,5 +1,5 @@
-#include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <numeric>
 #include <print>
 #include <random>
@@ -19,6 +19,14 @@ namespace {
 std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_int_distribution<size_t> num_objs_dist(30, 50);
+
+void assert(bool expr) {
+  if (!expr) {
+    exit(1);
+  }
+
+  return;
+}
 
 size_t get_random_obj_num() { return num_objs_dist(gen); }
 } // namespace
