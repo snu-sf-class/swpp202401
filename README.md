@@ -3,7 +3,7 @@
 - Instructor: Prof. [Chung-Kil Hur](http://sf.snu.ac.kr/gil.hur)
 - TA: [Seunghyeon Nam](https://sf.snu.ac.kr/seunghyeon.nam/)(@strikef),
 [Yonghee Kim](https://sf.snu.ac.kr/yonghee.kim/)(@ppapill0n),
-[Dongjae Lee](https://sf.snu.ac.kr/dongjae.lee/)(@mori1116)
+[Hyunwoo Lee](https://sf.snu.ac.kr/hyunwoo.lee/)(@hyun2023)
     + Email address: swpp@sf.snu.ac.kr
         * When sending TA an email,
             * The subject (제목) must start with [SWPP]
@@ -38,7 +38,7 @@ See here: https://github.com/snu-sf-class/swpp202401-assn1
     `g++ --version` should print version 7 or above. `clang++ --version` should print version 10 or above.
   * Submit to [eTL](https://myetl.snu.ac.kr/courses/258192/assignments/238592)
 
-* 3/28 : Assignment 2 has been announced. Deadline is 4/6, 11:59 PM.
+* 3/28 : Assignment 2 has been announced. Deadline is 4/~~6~~13, 11:59 PM.
 See here: [Assignment 2 Directory](practice-materials/assignments/assn2)
   * Run [package.sh](practice-materials/assignments/assn2/package.sh) to create
   the submission archive
