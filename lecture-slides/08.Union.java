@@ -1,3 +1,39 @@
+class A { ... }
+
+class B extends A { ... }
+
+class C extends A { override ...}
+
+------------------------------------
+
+interface Tree {...}.
+    
+class Leaf implements Tree {
+    ...
+}
+class Node implements Tree {
+   chl : list Tree
+
+   chl.get(0)....       
+}
+
+      Tree 
+    /     \
+   Node  Leaf
+
+    Node -> Tree, Tree
+
+--------------------------------
+interface A { op0; op1; op2 }
+interface B { op0; op3 }
+
+interface AorB extends A, B {
+    Boolean isA();
+}
+
+interface AandB extends A, B {
+}
+
 class AUB {
     Boolean isA() { throw ...; }
     op0() { throw ...; }
@@ -62,31 +98,25 @@ f(AUB u) {
 }
 
 -----------------------
+interface AB { op0; }
+    
+interface A extends AB { op1; op2 }
+interface B extends AB { op3 }
 
-interface AUB {
-    op0();
-    AI getA();
-    BI getB();
+interface AUB extends AB {
+    A getA();
+    B getB();
 }
 
-interface AI extends AUB {
-    op1();
-    op2();
-}
-
-interface BI extends AUB {
-    op3();
-}
-
-class A implements AI {
-    AI getA() { return this; }
-    BI getB() { return null; }
+class Aimpl implements A, AUB {
+    A getA() { return this; }
+    B getB() { return null; }
     op0() { ... };
     op1() { ... };
     op2() { ... };
 }
 
-class B implements BI {
+class Bimpl implements B, AUB {
     AI getA() { return null; }
     BI getB() { return this; }
     op0() { ... };
@@ -94,12 +124,28 @@ class B implements BI {
 }
 
 f(AUB u) {
-    AI a;
-    BI b;
+    A a;
+    B b;
     u.op0();
     if ((a = u.getA()) != null) {
 	a.op1(); a.op2();
     } else if ((b = u.getB()) != null) {
 	b.op0(); b.op3();
     } else { throw ...; } // impossible case
+}
+
+----------------------------------
+
+interface A {...}
+
+class FileStream implements A {
+    FileStream();
+    read() { ... }
+}
+    
+class ToUpper implements A {
+    A base;
+    F1(A a) {base = a}
+    read() { s = base.read(); return (toUpper(s)); }
+    ...
 }
