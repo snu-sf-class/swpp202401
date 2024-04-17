@@ -20,9 +20,8 @@ $CMAKE -G Ninja -B build \
     -DLLVM_ROOT=$LLVM_DIR \
     -DCMAKE_C_COMPILER=$CLANG \
     -DCMAKE_CXX_COMPILER=$CLANGXX \
-    -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-    -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -fuse-ld=$LLD" \
-    -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -fuse-ld=$LLD" \
+    -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=$LLD" \
+    -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=$LLD" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     -DBUILD_SHARED_LIBS=ON \
