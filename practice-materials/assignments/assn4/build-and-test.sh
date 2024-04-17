@@ -18,6 +18,7 @@ NINJA=$NINJA_DIR/bin/ninja
 
 $CMAKE -G Ninja -B build \
     -DLLVM_ROOT=$LLVM_DIR \
+    -DCMAKE_C_COMPILER=$CLANG \
     -DCMAKE_CXX_COMPILER=$CLANGXX \
     -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
     -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -fuse-ld=$LLD" \
