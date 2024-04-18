@@ -4,18 +4,20 @@
 //        (2) Engine -> ...
 
 
-interface Mechanic {
+// Visitor
+interface Visitor {
     void visit(Wheel wheel);
     void visit(Engine engine);
 }
 
-interface Machine {
-    void accept(Mechanic visitor); // CarElements have to provide accept().
+// Element or Elements
+interface Elements {
+    void accept(Visitor visitor); // CarElements have to provide accept().
 }
 
 
 
-class Wheel implements Machine {
+class Wheel implements Elements {
     private String name;
 
     public Wheel(String name) {
@@ -26,32 +28,32 @@ class Wheel implements Machine {
         return this.name;
     }
 
-    public void accept(Mechanic visitor) {
+    public void accept(Visitor visitor) {
 	/* ... do something ... */
 	
         visitor.visit(this);
     }
 }
 
-class Engine implements Machine {
+class Engine implements Elements {
     /* ... some implementation ... */
     
-    public void accept(Mechanic visitor) {
+    public void accept(Visitor visitor) {
 	/* ... do something ... */
 	
         visitor.visit(this);
     }
 }
 
-class Body implements Machine {
+class Body implements Elements {
     /* ... some implementation ... */
 
-    public void accept(Mechanic visitor) {
+    public void accept(Visitor visitor) {
 	/* do nothing */
     }
 }
 
-class Car implements Machine {
+class Car implements Elements {
     private Wheel[] wheels;
     private Engine engine;
     private Body body;
@@ -64,7 +66,7 @@ class Car implements Machine {
 	body = new Body();
     }
 
-    public void accept(Mechanic visitor) {
+    public void accept(Visitor visitor) {
 	engine.accept(visitor);
 	body.accept(visitor);
         for(Wheel element : this.wheels) {
@@ -73,7 +75,7 @@ class Car implements Machine {
     }
 }
 
-class DumMechanic1 implements Mechanic {
+class DumbVisitor1 implements Visitor {
     public void visit(Wheel wheel) {
         System.out.println("Visiting "+ wheel.getName() + " wheel");
     }
@@ -83,7 +85,7 @@ class DumMechanic1 implements Mechanic {
     }
 }
 
-class DumMechanic2 implements Mechanic {
+class DumbVisitor2 implements Visitor {
     public void visit(Wheel wheel) {
         System.out.println("Kicking my "+ wheel.getName() + " wheel");
     }
@@ -96,7 +98,7 @@ class DumMechanic2 implements Mechanic {
 class Main {
     static public void main(String[] args){
         Car car = new Car();
-        car.accept(new DumMechanic1());
-        car.accept(new DumMechanic2());
+        car.accept(new DumbVisitor1());
+        car.accept(new DumbVisitor2());
     }
 }
