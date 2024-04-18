@@ -30,6 +30,7 @@ We'll *rarely* be using eTL on this course!
 * 3/28 : Submit your team project teammates **by 4/2** (https://github.com/snu-sf-class/swpp202401/issues/10)
 
 ## Projects
+* 4/18 : Prepare for team presentation **on 4/25** (https://github.com/snu-sf-class/swpp202401/issues/28)
 
 ## Assignments
 * 3/12 : Assignment 1 has been announced. Deadline is 3/19, 11:59 PM.
