@@ -1,0 +1,593 @@
+From 0e08f3e02a4055e2d6de3f4805e767e58e9e662a Mon Sep 17 00:00:00 2001
+From: strikef <seunghyeon.nam@sf.snu.ac.kr>
+Date: Thu, 25 Apr 2024 13:12:26 +0900
+Subject: [PATCH] Add features to verify swpp2024 intrinsics
+
+---
+ .gitignore         |   1 +
+ CMakeLists.txt     |   2 +-
+ compile.sh         |  27 +++
+ tools/alive-tv.cpp | 458 ++++++++++++++++++++++++++++++++++++++++++---
+ 4 files changed, 459 insertions(+), 29 deletions(-)
+ create mode 100755 compile.sh
+
+diff --git a/.gitignore b/.gitignore
+index 8cb983c1..40095ff6 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,5 +1,6 @@
+ .vs
+ .vscode
++.cache
+ build*/
+ *.pyc
+ CMakeSettings.json
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9cd1fc95..c3a4e919 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.8)
++cmake_minimum_required(VERSION 3.13)
+ include(ProcessorCount)
+ 
+ project(Alive2)
+diff --git a/compile.sh b/compile.sh
+new file mode 100755
+index 00000000..6b7d212b
+--- /dev/null
++++ b/compile.sh
+@@ -0,0 +1,27 @@
++#!/bin/bash
++
++# Edit three variables below to match your system configuration
++CMAKE_DIR=~/cmake-3.28.3
++LLVM_DIR=~/llvm-18.1.0
++NINJA_DIR=~/ninja-1.11.1
++Z3_DIR=~/z3-4.13.0
++
++CLANG=$LLVM_DIR/bin/clang
++CLANGXX=$LLVM_DIR/bin/clang++
++CMAKE=$CMAKE_DIR/bin/cmake
++NINJA=$NINJA_DIR/bin/ninja
++LLD=$LLVM_DIR/bin/ld.lld
++
++$CMAKE -GNinja -Bbuild \
++    -DBUILD_TV=ON \
++    -DCMAKE_C_COMPILER=$CLANG \
++    -DCMAKE_CXX_COMPILER=$CLANGXX \
++    -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
++    -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -fuse-ld=$LLD" \
++    -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -fuse-ld=$LLD" \
++    -DCMAKE_PREFIX_PATH="$LLVM_DIR;$Z3_DIR" \
++    -DCMAKE_BUILD_TYPE=Release \
++    -DCMAKE_MAKE_PROGRAM=$NINJA \
++    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
++    -DBUILD_SHARED_LIBS=ON
++$CMAKE --build build
+diff --git a/tools/alive-tv.cpp b/tools/alive-tv.cpp
+index d97d673c..b1e8993e 100644
+--- a/tools/alive-tv.cpp
++++ b/tools/alive-tv.cpp
+@@ -10,23 +10,34 @@
+ #include "tools/transform.h"
+ #include "util/version.h"
+ 
++#include "llvm/ADT/APInt.h"
+ #include "llvm/Analysis/TargetLibraryInfo.h"
+ #include "llvm/Bitcode/BitcodeReader.h"
+-#include "llvm/InitializePasses.h"
+-#include "llvm/IR/LLVMContext.h"
++#include "llvm/IR/BasicBlock.h"
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/DerivedTypes.h"
+ #include "llvm/IR/Function.h"
+-#include "llvm/IR/Module.h"
++#include "llvm/IR/Instruction.h"
++#include "llvm/IR/Instructions.h"
++#include "llvm/IR/LLVMContext.h"
+ #include "llvm/IR/LegacyPassManager.h"
++#include "llvm/IR/Module.h"
+ #include "llvm/IRReader/IRReader.h"
++#include "llvm/InitializePasses.h"
+ #include "llvm/Passes/PassBuilder.h"
++#include "llvm/Support/Casting.h"
+ #include "llvm/Support/PrettyStackTrace.h"
+ #include "llvm/Support/Signals.h"
++#include "llvm/Support/TypeSize.h"
+ #include "llvm/TargetParser/Triple.h"
++#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+ #include "llvm/Transforms/Utils/Cloning.h"
+ 
++#include <format>
+ #include <fstream>
+ #include <iostream>
+ #include <sstream>
++#include <unordered_map>
+ #include <utility>
+ 
+ using namespace tools;
+@@ -40,36 +51,418 @@ using namespace llvm_util;
+ #include "llvm_util/cmd_args_list.h"
+ 
+ namespace {
+-
+ llvm::cl::opt<string> opt_file1(llvm::cl::Positional,
+-  llvm::cl::desc("first_bitcode_file"),
+-  llvm::cl::Required, llvm::cl::value_desc("filename"),
+-  llvm::cl::cat(alive_cmdargs));
++                                llvm::cl::desc("first_bitcode_file"),
++                                llvm::cl::Required,
++                                llvm::cl::value_desc("filename"),
++                                llvm::cl::cat(alive_cmdargs));
+ 
+ llvm::cl::opt<string> opt_file2(llvm::cl::Positional,
+-  llvm::cl::desc("[second_bitcode_file]"),
+-  llvm::cl::Optional, llvm::cl::value_desc("filename"),
+-  llvm::cl::cat(alive_cmdargs));
++                                llvm::cl::desc("[second_bitcode_file]"),
++                                llvm::cl::Optional,
++                                llvm::cl::value_desc("filename"),
++                                llvm::cl::cat(alive_cmdargs));
++
++llvm::cl::opt<std::string>
++    opt_src_fn(LLVM_ARGS_PREFIX "src-fn",
++               llvm::cl::desc("Name of src function (without @)"),
++               llvm::cl::cat(alive_cmdargs), llvm::cl::init("src"));
++
++llvm::cl::opt<std::string>
++    opt_tgt_fn(LLVM_ARGS_PREFIX "tgt-fn",
++               llvm::cl::desc("Name of tgt function (without @)"),
++               llvm::cl::cat(alive_cmdargs), llvm::cl::init("tgt"));
++
++llvm::cl::opt<string> optPass(
++    LLVM_ARGS_PREFIX "passes", llvm::cl::value_desc("optimization passes"),
++    llvm::cl::desc("Specify which LLVM passes to run (default=O2). "
++                   "The syntax is described at "
++                   "https://llvm.org/docs/NewPassManager.html#invoking-opt"),
++    llvm::cl::cat(alive_cmdargs), llvm::cl::init("O2"));
++
++llvm::Constant *createConstantInt(llvm::Type *ty, uint64_t val) {
++  return llvm::Constant::getIntegerValue(
++      ty, llvm::APInt(ty->getIntegerBitWidth(), val));
++}
++
++bool isSWPPIncr(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("incr");
++}
++
++void replaceSWPPIncr(llvm::CallInst *CI) {
++  auto op = CI->getArgOperand(0);
++  auto ty = CI->getType();
++  auto inst = llvm::BinaryOperator::Create(
++      llvm::Instruction::Add, op, createConstantInt(ty, 1), "incr", CI);
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, inst);
++}
++
++bool isSWPPDecr(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("decr");
++}
++
++void replaceSWPPDecr(llvm::CallInst *CI) {
++  auto op = CI->getArgOperand(0);
++  auto ty = CI->getType();
++  auto inst = llvm::BinaryOperator::Create(
++      llvm::Instruction::Sub, op, createConstantInt(ty, 1), "decr", CI);
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, inst);
++}
++
++bool isSWPPVectorIncr(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vincr");
++}
++
++void replaceSWPPVectorIncr(llvm::CallInst *CI) {
++  auto op = CI->getArgOperand(0);
++  auto ty = llvm::dyn_cast<llvm::VectorType>(CI->getType());
++  auto elem_ty = ty->getElementType();
++  auto inst = llvm::BinaryOperator::Create(
++      llvm::Instruction::Add, op,
++      llvm::ConstantVector::getSplat(ty->getElementCount(),
++                                     createConstantInt(elem_ty, 1)),
++      "vincr", CI);
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, inst);
++}
++
++bool isSWPPVectorDecr(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vdecr");
++}
++
++void replaceSWPPVectorDecr(llvm::CallInst *CI) {
++  auto op = CI->getArgOperand(0);
++  auto ty = llvm::dyn_cast<llvm::VectorType>(CI->getType());
++  auto elem_ty = ty->getElementType();
++  auto inst = llvm::BinaryOperator::Create(
++      llvm::Instruction::Sub, op,
++      llvm::ConstantVector::getSplat(ty->getElementCount(),
++                                     createConstantInt(elem_ty, 1)),
++      "vdecr", CI);
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, inst);
++}
++
++void replaceSWPPVectorParallelOperation(llvm::CallInst *CI,
++                                        llvm::Instruction::BinaryOps op,
++                                        const std::string_view op_twine) {
++  auto op1 = CI->getArgOperand(0);
++  auto op2 = CI->getArgOperand(1);
++  auto ty = llvm::dyn_cast<llvm::VectorType>(CI->getType());
++  const auto elem_ty = ty->getElementType();
++  const auto idx_ty = llvm::IntegerType::get(CI->getContext(), 32);
++  const size_t elem_cnt = ty->getElementCount().getFixedValue();
++  llvm::Value *vec = llvm::ConstantVector::getSplat(
++      ty->getElementCount(), createConstantInt(elem_ty, 0));
++
++  for (size_t i = 0; i < elem_cnt; i += 2) {
++    const auto idx_l = i / 2;
++    const auto vl1 = llvm::ExtractElementInst::Create(
++        op1, createConstantInt(idx_ty, i), "", CI);
++    const auto vl2 = llvm::ExtractElementInst::Create(
++        op1, createConstantInt(idx_ty, i + 1), "", CI);
++    const auto opl = llvm::BinaryOperator::Create(
++        op, vl1, vl2, std::format("{}_{}", op_twine, idx_l), CI);
++
++    const auto idx_r = (i + elem_cnt) / 2;
++    const auto vr1 = llvm::ExtractElementInst::Create(
++        op2, createConstantInt(idx_ty, i), "", CI);
++    const auto vr2 = llvm::ExtractElementInst::Create(
++        op2, createConstantInt(idx_ty, i + 1), "", CI);
++    const auto opr = llvm::BinaryOperator::Create(
++        op, vr1, vr2, std::format("{}_{}", op_twine, idx_r), CI);
++    vec = llvm::InsertElementInst::Create(
++        vec, opl, createConstantInt(idx_ty, idx_l),
++        std::format("{}_insert_{}", op_twine, idx_l), CI);
++    vec = llvm::InsertElementInst::Create(
++        vec, opr, createConstantInt(idx_ty, idx_r),
++        std::format("{}_insert_{}", op_twine, idx_r), CI);
++  }
++
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, vec);
++}
++
++bool isSWPPVectorParallelUDiv(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpudiv");
++}
++
++void replaceSWPPVectorParallelUDiv(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::UDiv, "vpudiv");
++}
++
++bool isSWPPVectorParallelSDiv(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpsdiv");
++}
++
++void replaceSWPPVectorParallelSDiv(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::SDiv, "vpsdiv");
++}
++
++bool isSWPPVectorParallelURem(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpurem");
++}
++
++void replaceSWPPVectorParallelURem(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::URem, "vpurem");
++}
++
++bool isSWPPVectorParallelSRem(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpsrem");
++}
++
++void replaceSWPPVectorParallelSRem(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::SRem, "vpsrem");
++}
++
++bool isSWPPVectorParallelMul(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpmul");
++}
++
++void replaceSWPPVectorParallelMul(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::Mul, "vpmul");
++}
++
++bool isSWPPVectorParallelAnd(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpand");
++}
++
++void replaceSWPPVectorParallelAnd(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::And, "vpand");
++}
++
++bool isSWPPVectorParallelOr(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpor");
++}
++
++void replaceSWPPVectorParallelOr(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::Or, "vpor");
++}
++
++bool isSWPPVectorParallelXor(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpxor");
++}
++
++void replaceSWPPVectorParallelXor(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::Xor, "vpxor");
++}
++
++bool isSWPPVectorParallelAdd(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpadd");
++}
++
++void replaceSWPPVectorParallelAdd(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::Add, "vpadd");
++}
++
++bool isSWPPVectorParallelSub(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpsub");
++}
++
++void replaceSWPPVectorParallelSub(llvm::CallInst *CI) {
++  replaceSWPPVectorParallelOperation(CI, llvm::Instruction::Sub, "vpsub");
++}
+ 
+-llvm::cl::opt<std::string> opt_src_fn(LLVM_ARGS_PREFIX "src-fn",
+-  llvm::cl::desc("Name of src function (without @)"),
+-  llvm::cl::cat(alive_cmdargs), llvm::cl::init("src"));
++std::unordered_map<std::string, llvm::ICmpInst::Predicate> pred_map = {
++    {"eq", llvm::ICmpInst::ICMP_EQ},   {"ne", llvm::ICmpInst::ICMP_NE},
++    {"ult", llvm::ICmpInst::ICMP_ULT}, {"ule", llvm::ICmpInst::ICMP_ULE},
++    {"ugt", llvm::ICmpInst::ICMP_UGT}, {"uge", llvm::ICmpInst::ICMP_UGE},
++    {"slt", llvm::ICmpInst::ICMP_SLT}, {"sle", llvm::ICmpInst::ICMP_SLE},
++    {"sgt", llvm::ICmpInst::ICMP_SGT}, {"sge", llvm::ICmpInst::ICMP_SGE}};
+ 
+-llvm::cl::opt<std::string> opt_tgt_fn(LLVM_ARGS_PREFIX"tgt-fn",
+-  llvm::cl::desc("Name of tgt function (without @)"),
+-  llvm::cl::cat(alive_cmdargs), llvm::cl::init("tgt"));
++bool isSWPPVectorParallelICmp(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpicmp");
++}
+ 
+-llvm::cl::opt<string>
+-    optPass(LLVM_ARGS_PREFIX "passes",
+-            llvm::cl::value_desc("optimization passes"),
+-            llvm::cl::desc("Specify which LLVM passes to run (default=O2). "
+-                           "The syntax is described at "
+-                           "https://llvm.org/docs/NewPassManager.html#invoking-opt"),
+-            llvm::cl::cat(alive_cmdargs), llvm::cl::init("O2"));
++void replaceSWPPVectorParallelICmp(llvm::CallInst *CI) {
++  auto op1 = CI->getArgOperand(0);
++  auto op2 = CI->getArgOperand(1);
++  auto ty = llvm::dyn_cast<llvm::VectorType>(CI->getType());
++  const auto elem_ty = ty->getElementType();
++  const auto idx_ty = llvm::IntegerType::get(CI->getContext(), 32);
++  const size_t elem_cnt = ty->getElementCount().getFixedValue();
++  llvm::Value *vec = llvm::ConstantVector::getSplat(
++      ty->getElementCount(), createConstantInt(elem_ty, 0));
++
++  const auto pred_str = CI->getCalledFunction()
++                            ->getName()
++                            .substr("vpicmp_"s.length(), 3)
++                            .rtrim("_")
++                            .str();
++  const auto pred = pred_map.at(pred_str);
++
++  for (size_t i = 0; i < elem_cnt; i += 2) {
++    const auto vl1 =
++        llvm::ExtractElementInst::Create(op1, createConstantInt(idx_ty, i));
++    const auto vl2 = llvm::ExtractElementInst::Create(
++        op1, createConstantInt(elem_ty, i + 1));
++    const auto idx_l = i / 2;
++    const auto opl = llvm::ICmpInst::Create(
++        llvm::Instruction::OtherOps::ICmp, pred, vl1, vl2,
++        std::format("vpicmp_{}_{}", pred_str, idx_l), CI);
++    vec = llvm::InsertElementInst::Create(
++        vec, opl, createConstantInt(idx_ty, idx_l),
++        std::format("vpicmp_{}_{}", pred_str, idx_l), CI);
++
++    const auto vr1 =
++        llvm::ExtractElementInst::Create(op2, createConstantInt(elem_ty, i));
++    const auto vr2 =
++        llvm::ExtractElementInst::Create(op2, createConstantInt(idx_ty, i + 1));
++    const auto idx_r = (i + elem_cnt) / 2;
++    const auto opr = llvm::ICmpInst::Create(
++        llvm::Instruction::OtherOps::ICmp, pred, vr1, vr2,
++        std::format("vpicmp_{}_{}", pred_str, idx_r), CI);
++    vec = llvm::InsertElementInst::Create(
++        vec, opr, createConstantInt(idx_ty, idx_r),
++        std::format("vpicmp_{}_{}", pred_str, idx_r), CI);
++  }
+ 
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, vec);
++}
+ 
++bool isSWPPVectorParallelSelect(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vpselect");
+ }
+ 
++void replaceSWPPVectorParallelSelect(llvm::CallInst *CI) {
++  auto comp = CI->getArgOperand(0);
++  auto op1 = CI->getArgOperand(1);
++  auto op2 = CI->getArgOperand(2);
++  auto ty = llvm::dyn_cast<llvm::VectorType>(CI->getType());
++  const auto elem_ty = ty->getElementType();
++  const auto idx_ty = llvm::IntegerType::get(CI->getContext(), 32);
++  const size_t elem_cnt = ty->getElementCount().getFixedValue();
++  llvm::Value *vec = llvm::ConstantVector::getSplat(
++      ty->getElementCount(), createConstantInt(elem_ty, 0));
++
++  for (size_t i = 0; i < elem_cnt; i += 2) {
++    const auto idx_l = i / 2;
++    const auto vlc = llvm::ExtractElementInst::Create(
++        comp, createConstantInt(idx_ty, idx_l));
++    const auto vl1 =
++        llvm::ExtractElementInst::Create(op1, createConstantInt(idx_ty, i));
++    const auto vl2 = llvm::ExtractElementInst::Create(
++        op1, createConstantInt(elem_ty, i + 1));
++    const auto opl = llvm::SelectInst::Create(
++        vlc, vl1, vl2, std::format("vpselect_{}", idx_l), CI);
++    vec = llvm::InsertElementInst::Create(
++        vec, opl, createConstantInt(idx_ty, idx_l),
++        std::format("vpselect_insert_{}", idx_l), CI);
++
++    const auto idx_r = (i + elem_cnt) / 2;
++    const auto vrc = llvm::ExtractElementInst::Create(
++        comp, createConstantInt(idx_ty, idx_r));
++    const auto vr1 =
++        llvm::ExtractElementInst::Create(op2, createConstantInt(elem_ty, i));
++    const auto vr2 =
++        llvm::ExtractElementInst::Create(op2, createConstantInt(idx_ty, i + 1));
++    const auto opr = llvm::SelectInst::Create(
++        vrc, vr1, vr2, std::format("vpselect_{}", idx_r), CI);
++    vec = llvm::InsertElementInst::Create(
++        vec, opr, createConstantInt(idx_ty, idx_r),
++        std::format("vpselect_insert_{}", idx_r), CI);
++  }
++
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, vec);
++}
++
++bool isSWPPVectorBroadcast(llvm::CallInst *CI) {
++  return CI->getCalledFunction()->getName().starts_with("vbcast");
++}
++
++void replaceSWPPVectorBroadcast(llvm::CallInst *CI) {
++  auto val = CI->getArgOperand(0);
++  auto ty = llvm::dyn_cast<llvm::VectorType>(CI->getType());
++  const auto elem_ty = ty->getElementType();
++  const auto idx_ty = llvm::IntegerType::get(CI->getContext(), 32);
++  const size_t elem_cnt = ty->getElementCount().getFixedValue();
++  llvm::Value *vec = llvm::ConstantVector::getSplat(
++      ty->getElementCount(), createConstantInt(elem_ty, 0));
++  for (size_t i = 0; i < elem_cnt; i++) {
++    vec =
++        llvm::InsertElementInst::Create(vec, val, createConstantInt(idx_ty, i),
++                                        std::format("vbcast_{}", i), CI);
++  }
++
++  auto bbiter = CI->getIterator();
++  llvm::ReplaceInstWithValue(bbiter, vec);
++}
++
++bool isSWPPIntrinsicCall(llvm::CallInst *CI) {
++  return isSWPPIncr(CI) || isSWPPDecr(CI) || isSWPPVectorIncr(CI) ||
++         isSWPPVectorDecr(CI) || isSWPPVectorParallelUDiv(CI) ||
++         isSWPPVectorParallelSDiv(CI) || isSWPPVectorParallelURem(CI) ||
++         isSWPPVectorParallelSRem(CI) || isSWPPVectorParallelMul(CI) ||
++         isSWPPVectorParallelAnd(CI) || isSWPPVectorParallelOr(CI) ||
++         isSWPPVectorParallelXor(CI) || isSWPPVectorParallelAdd(CI) ||
++         isSWPPVectorParallelSub(CI) || isSWPPVectorParallelICmp(CI) ||
++         isSWPPVectorParallelSelect(CI) || isSWPPVectorBroadcast(CI);
++}
++
++void replaceSWPPIntrinsicCall(llvm::CallInst *CI) {
++  if (isSWPPIncr(CI)) {
++    replaceSWPPIncr(CI);
++  } else if (isSWPPDecr(CI)) {
++    replaceSWPPDecr(CI);
++  } else if (isSWPPVectorIncr(CI)) {
++    replaceSWPPVectorIncr(CI);
++  } else if (isSWPPVectorDecr(CI)) {
++    replaceSWPPVectorDecr(CI);
++  } else if (isSWPPVectorParallelUDiv(CI)) {
++    replaceSWPPVectorParallelUDiv(CI);
++  } else if (isSWPPVectorParallelSDiv(CI)) {
++    replaceSWPPVectorParallelSDiv(CI);
++  } else if (isSWPPVectorParallelURem(CI)) {
++    replaceSWPPVectorParallelURem(CI);
++  } else if (isSWPPVectorParallelSRem(CI)) {
++    replaceSWPPVectorParallelSRem(CI);
++  } else if (isSWPPVectorParallelMul(CI)) {
++    replaceSWPPVectorParallelMul(CI);
++  } else if (isSWPPVectorParallelAnd(CI)) {
++    replaceSWPPVectorParallelAnd(CI);
++  } else if (isSWPPVectorParallelOr(CI)) {
++    replaceSWPPVectorParallelOr(CI);
++  } else if (isSWPPVectorParallelXor(CI)) {
++    replaceSWPPVectorParallelXor(CI);
++  } else if (isSWPPVectorParallelAdd(CI)) {
++    replaceSWPPVectorParallelAdd(CI);
++  } else if (isSWPPVectorParallelSub(CI)) {
++    replaceSWPPVectorParallelSub(CI);
++  } else if (isSWPPVectorParallelICmp(CI)) {
++    replaceSWPPVectorParallelICmp(CI);
++  } else if (isSWPPVectorParallelSelect(CI)) {
++    replaceSWPPVectorParallelSelect(CI);
++  } else if (isSWPPVectorBroadcast(CI)) {
++    replaceSWPPVectorBroadcast(CI);
++  }
++}
++
++void replaceSWPPIntrinsics(llvm::Module *M) {
++  std::vector<llvm::CallInst *> intrinsics;
++
++  for (auto &F : M->functions()) {
++    for (auto &BB : F) {
++      for (auto &I : BB) {
++        if (auto CI = llvm::dyn_cast<llvm::CallInst>(&I)) {
++          if (isSWPPIntrinsicCall(CI)) {
++            intrinsics.push_back(CI);
++          }
++        }
++      }
++    }
++  }
++
++  for (auto CI : intrinsics) {
++    replaceSWPPIntrinsicCall(CI);
++  }
++}
++
++} // namespace
++
+ unique_ptr<Cache> cache;
+ 
+ int main(int argc, char **argv) {
+@@ -122,9 +515,10 @@ and "tgt5" will unused.
+     cerr << "Could not read bitcode from '" << opt_file1 << "'\n";
+     return -1;
+   }
++  replaceSWPPIntrinsics(M1.get());
+ 
+ #define ARGS_MODULE_VAR M1
+-# include "llvm_util/cmd_args_def.h"
++#include "llvm_util/cmd_args_def.h"
+ 
+   auto &DL = M1.get()->getDataLayout();
+   llvm::Triple targetTriple(M1.get()->getTargetTriple());
+@@ -195,6 +589,7 @@ and "tgt5" will unused.
+       return -1;
+     }
+   }
++  replaceSWPPIntrinsics(M2.get());
+ 
+   if (M1.get()->getTargetTriple() != M2.get()->getTargetTriple()) {
+     *out << "Modules have different target triples\n";
+@@ -227,10 +622,17 @@ and "tgt5" will unused.
+   }
+ summary:
+   *out << "Summary:\n"
+-          "  " << verifier.num_correct << " correct transformations\n"
+-          "  " << verifier.num_unsound << " incorrect transformations\n"
+-          "  " << verifier.num_failed  << " failed-to-prove transformations\n"
+-          "  " << verifier.num_errors << " Alive2 errors\n";
++          "  "
++       << verifier.num_correct
++       << " correct transformations\n"
++          "  "
++       << verifier.num_unsound
++       << " incorrect transformations\n"
++          "  "
++       << verifier.num_failed
++       << " failed-to-prove transformations\n"
++          "  "
++       << verifier.num_errors << " Alive2 errors\n";
+ 
+ end:
+   if (opt_smt_stats)
+-- 
+2.39.3
+

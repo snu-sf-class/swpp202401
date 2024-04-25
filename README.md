@@ -31,6 +31,10 @@ We'll *rarely* be using eTL on this course!
 
 ## Projects
 * 4/18 : Prepare for team presentation **on 4/25** (https://github.com/snu-sf-class/swpp202401/issues/28)
+* 4/19 : Project repositories (except Alive2 patch for SWPP intrinsics)
+has been published (https://github.com/snu-sf-class/swpp202401/issues/29)
+* 4/25 : Alive2 patch for SWPP intrinsics has been published
+* 4/25 : Project documentation has been updated
 
 ## Assignments
 * 3/12 : Assignment 1 has been announced. Deadline is 3/19, 11:59 PM.
