@@ -63,3 +63,9 @@ See here: [Assignment 4 Directory](practice-materials/assignments/assn4)
   * Run [package.sh](practice-materials/assignments/assn4/package.sh) to create
   the submission archive
   * Submit to [eTL](https://myetl.snu.ac.kr/courses/258192/assignments/245358)
+
+* 5/14 : Assignment 5 has been announced. Deadline is 6/1, 11:59 PM.
+See here: [Assignment 5 Directory](practice-materials/assignments/assn5)
+  * Run [package.sh](practice-materials/assignments/assn5/package.sh) to create
+  the submission archive
+  * Submit to [eTL](https://myetl.snu.ac.kr/courses/258192/assignments/252403)
