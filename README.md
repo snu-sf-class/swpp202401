@@ -34,9 +34,10 @@ We'll *rarely* be using eTL on this course!
 * 4/19 : Project repositories (except Alive2 patch for SWPP intrinsics)
 has been published (https://github.com/snu-sf-class/swpp202401/issues/29)
 * 4/25 : Alive2 patch for SWPP intrinsics has been published
-* 5/7: Project interpreter has been updated (previous updates: 4/29, 5/1)
-* 5/9: Project skeleton has been updated (prvious updates: 4/23, 5/2)
+* 5/7 : Project interpreter has been updated (previous updates: 4/29, 5/1)
 * 5/10 : Project documentation has been updated (previous updates: 4/25, 4/26, 4/28, 5/2)
+* 5/14 : Project skeleton has been updated (previous updates: 4/23, 5/2, 5/9)
+* 5/14 : Project example programs have been updated 
 
 ## Assignments
 * 3/12 : Assignment 1 has been announced. Deadline is 3/19, 11:59 PM.
