@@ -8,10 +8,10 @@ define i4 @main(i4 %x, i4 %y) {
 ; CHECK-NEXT:    call void @f(i4 [[A]], i4 [[A]])
 ; CHECK-NEXT:    br label [[BB_EXIT:%.*]]
 ; CHECK:       bb_false:
-; CHECK-NEXT:    call void @f(i4 [[A]], i4 [[B]])
+; CHECK-NEXT:    call void @g(i4 [[A]], i4 [[B]])
 ; CHECK-NEXT:    br label [[BB_EXIT]]
 ; CHECK:       bb_exit:
-; CHECK-NEXT:    call void @f(i4 [[A]], i4 [[B]])
+; CHECK-NEXT:    call void @g(i4 [[A]], i4 [[B]])
 ; CHECK-NEXT:    ret i4 [[B]]
 ;
   %a = add i4 %x, %y
