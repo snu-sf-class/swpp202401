@@ -37,7 +37,7 @@ has been published (https://github.com/snu-sf-class/swpp202401/issues/29)
 * 5/10 : Project documentation has been updated (previous updates: 4/25, 4/26, 4/28, 5/2)
 * 5/14 : Project example programs have been updated 
 * 5/18 : Project interpreter has been updated (previous updates: 4/29, 5/1, 5/7, 5/17)
-* 5/30 : Project skeleton has been updated (previous updates: 4/23, 5/2, 5/9, 5/14, 5/16, 5/17, 5/19, 5/23, 5/28)
+* 5/31 : Project skeleton has been updated (previous updates: 4/23, 5/2, 5/9, 5/14, 5/16, 5/17, 5/19, 5/23, 5/28, 5/30)
 
 ## Assignments
 * 3/12 : Assignment 1 has been announced. Deadline is 3/19, 11:59 PM.
